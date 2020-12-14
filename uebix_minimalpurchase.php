@@ -148,6 +148,12 @@ class Uebix_minimalpurchase extends Module
                         'rows' => 5
                     ),
                     array(
+                        'type' => 'text',
+                        'name' => 'UEBIX_VOUCHER_STARTSEQ',
+                        'label' => $this->l('Initial characters sequence of the voucher'),
+                        'desc' => $this->l('If a discount voucher starts with this character sequence, the order total will be calculated without discount codes.')
+                    ),
+                    array(
                         'col' => 3,
                         'type' => 'text',
                         'prefix' => '<i class="icon icon-eur"></i>',
@@ -175,6 +181,7 @@ class Uebix_minimalpurchase extends Module
         }
         return array(
             'UEBIX_MINIMALPURCHASE_TEXT' => $messages,
+            'UEBIX_VOUCHER_STARTSEQ' => Configuration::get('UEBIX_VOUCHER_STARTSEQ'),
             'PS_PURCHASE_MINIMUM' => Configuration::get('PS_PURCHASE_MINIMUM')
         );
     }
@@ -206,7 +213,22 @@ class Uebix_minimalpurchase extends Module
             if (isset($params['presentedCart']['minimalPurchase']) && isset($params['presentedCart']['minimalPurchaseRequired'])) {
                 $priceFormatter = new PriceFormatter();
                 $productsTotalIncludingTax = $this->context->cart->getOrderTotal(true, Cart::ONLY_PRODUCTS);
-                $productsDiscountTotalIncludingTax = $this->context->cart->getOrderTotal(true, Cart::ONLY_DISCOUNTS);
+                $cartRules = $this->context->cart->getCartRules();
+                $productsDiscountTotalIncludingTax = 0;
+                $foundVoucherCode = false;
+                $startSequence = trim(Configuration::get('UEBIX_VOUCHER_STARTSEQ'));
+                
+                if (! Tools::isEmpty($startSequence)) {
+                    foreach ($cartRules as $cartRule) {
+                        if (isset($cartRule['obj']) && Validate::isLoadedObject($cartRule['obj']) && stripos(trim($cartRule['obj']->code), $startSequence) === 0) {
+                            $foundVoucherCode = true;
+                            break;
+                        }
+                    }
+                }
+                if (! $foundVoucherCode) {
+                    $productsDiscountTotalIncludingTax = $this->context->cart->getOrderTotal(true, Cart::ONLY_DISCOUNTS);
+                }
                 $orderTotal = $productsTotalIncludingTax - $productsDiscountTotalIncludingTax;
                 $minimalPurchase = $params['presentedCart']['minimalPurchase'];
                 
