@@ -35,7 +35,7 @@ class Uebix_minimalpurchase extends Module
     {
         $this->name = 'uebix_minimalpurchase';
         $this->tab = 'pricing_promotion';
-        $this->version = '1.0.0';
+        $this->version = '1.1.0';
         $this->author = 'Uebix';
         $this->need_instance = 0;
         
