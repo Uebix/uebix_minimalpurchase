@@ -142,7 +142,7 @@ class Uebix_minimalpurchase extends Module
                         'type' => 'textarea',
                         'name' => 'UEBIX_MINIMALPURCHASE_TEXT',
                         'label' => $this->l('Message'),
-                        'desc' => $this->l('Enter a valid text message. Use %amount% placeholder for the minimal purchase total and %total% for the current cart total.'),
+                        'desc' => $this->l('Enter a valid text message. Use %amount% placeholder for the minimal purchase total, %total% for the current cart total and %discounts% for the current discounts total in cart.'),
                         'lang' => true,
                         'cols' => 60,
                         'rows' => 5
@@ -206,12 +206,26 @@ class Uebix_minimalpurchase extends Module
             if (isset($params['presentedCart']['minimalPurchase']) && isset($params['presentedCart']['minimalPurchaseRequired'])) {
                 $priceFormatter = new PriceFormatter();
                 $productsTotalIncludingTax = $this->context->cart->getOrderTotal(true, Cart::ONLY_PRODUCTS);
+                $productsDiscountTotalIncludingTax = $this->context->cart->getOrderTotal(true, Cart::ONLY_DISCOUNTS);
+                $orderTotal = $productsTotalIncludingTax - $productsDiscountTotalIncludingTax;
                 $minimalPurchase = $params['presentedCart']['minimalPurchase'];
                 
-                $params['presentedCart']['minimalPurchaseRequired'] = ($productsTotalIncludingTax < $minimalPurchase) ? $this->getTranslator()->trans(Configuration::get('UEBIX_MINIMALPURCHASE_TEXT', $this->context->language->id), [
-                    '%amount%' => $priceFormatter->format($minimalPurchase),
-                    '%total%' => $priceFormatter->format($productsTotalIncludingTax)
-                ]) : '';
+                $search = [
+                    '%amount%',
+                    '%total%',
+                    '%discounts%'
+                ];
+                
+                $replace = [
+                    $priceFormatter->format($minimalPurchase),
+                    $priceFormatter->format($orderTotal),
+                    $priceFormatter->format($productsDiscountTotalIncludingTax)
+                ];
+                
+                $message = Configuration::get('UEBIX_MINIMALPURCHASE_TEXT', $this->context->language->id, null, null, 'A minimum shopping cart total of %amount% (tax incl.) is required to validate your order. Current cart total is %total% (tax incl.).');
+                $message = str_ireplace($search, $replace, $message);
+                
+                $params['presentedCart']['minimalPurchaseRequired'] = ($orderTotal < $minimalPurchase) ? $message : '';
             }
         }
     }
